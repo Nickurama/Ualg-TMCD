@@ -42,8 +42,8 @@ B_d = np.array([ 1,  2,  7])
 # main
 # ==========================
 
-A = A_a
-B = B_a
+A = A_c
+B = B_c
 
 print("A:")
 print(A)
@@ -56,7 +56,7 @@ print("----------------------")
 print()
 
 rre, pivots = la.reduced_row_echelon(A, B)
-print("Reduced row echelon:")
+print("Augmented reduced row echelon:")
 print(rre)
 
 print()
