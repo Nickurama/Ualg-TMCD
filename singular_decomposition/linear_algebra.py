@@ -755,34 +755,54 @@ def qr_decomposition(A: np.ndarray) -> Tuple[np.ndarray, np.ndarray]:
     # returns Q and R
     return Q, R
 
+# normalizes a single column
 def normalize_col(A: np.ndarray, col: int) -> None:
+    # takes the sqrt of the sum of each value of that column squared (the norm)
     col_norm = np.sqrt(np.sum(A[:,col]**2))
+    # replaces each element of that column by itself divided by the norm (normalization)
     A[:,col] = A[:,col] / col_norm
 
 def normalize_cols(A: np.ndarray) -> None:
+    # normalizes each column
     for col in range(A.shape[1]):
         normalize_col(A, col)
 
+# singular decomposition of an array, into U, sigma and V transposed
+# only works for 3x3 matrices or lower
 def singular_decomposition(A: np.ndarray) -> Tuple[np.ndarray, np.ndarray, np.ndarray]:
-    # only works for 3x3 matrices or lower
+    # if the shape is above 3, the function can't solve it
     if A.shape[0] > 3 or A.shape[1] > 3:
         raise Exception("singular decomposition requires a 3x3 matrix or lower")
 
+    # calculate A.T * A to get V
     A_t_A = A.T @ A
+    # get the eigenvalues for V
     A_t_A_eigenvalues = get_eigenvalues_3_by_3_or_below(A_t_A)
+    # get the eigenspace for those values for V
     A_t_A_D, A_t_A_P = get_eigenspace(A_t_A, A_t_A_eigenvalues)
 
+    # sigma is really just the square root of the eigenvalues of A across the diagonal but with the matrix shape of A
+    # this "pads" zeroes so that the eigenvalues across the diagonal become the same shape as A
     sigma = np.pad(A_t_A_D, ((0, A.shape[0] - A_t_A_D.shape[0]),(0, A.shape[1] - A_t_A_D.shape[1])), mode='constant')
+    # applies the square root to the eigenvalues
     sigma = np.sqrt(sigma)
 
+    # normalizes the eigenspace (the eigenvectors)
     normalize_cols(A_t_A_P)
+    # if V are the normalized eigenvectors, V_t are the normalized eigenvectors transposed
     V_t = A_t_A_P.T
 
+    # calculate A * A.T to get U
     A_A_t = A @ A.T
+    # get the eigenvalues for U
     A_A_t_eigenvalues = get_eigenvalues_3_by_3_or_below(A_A_t)
+    # get the eigenspace for those values for U
     A_A_t_D, A_A_t_P = get_eigenspace(A_A_t, A_A_t_eigenvalues)
 
+    # normalizes the eigenspace (the eigenvectors)
     normalize_cols(A_A_t_P)
+    # the eigenvectors of A * A.T are just U
     U = A_A_t_P
 
+    # returns the decomposition matrices
     return U, sigma, V_t
