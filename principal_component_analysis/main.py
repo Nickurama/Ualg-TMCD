@@ -1,99 +1,124 @@
 import numpy as np
-import linear_algebra as la
-
-
-# ==========================
-# constants
-# ==========================
-
-A = np.array([
-    [  0,  1,  1],
-    [  1,  0,  1],
-    [  1,  1,  2],
-])
-
-# A = np.array([
-#     [  1,  1],
-#     [  0,  1],
-#     [ -1,  1],
-# ])
-
-# ==========================
-# main
-# ==========================
-
-print("A:")
-print(A)
-print()
-
-print("----------------------")
-print()
-
-U, sigma, V_t = la.singular_decomposition(A)
-
-print("U:")
-print(U)
-print()
-print("----------------------")
-print()
-
-print("sigma:")
-print(sigma)
-print()
-print("----------------------")
-print()
-
-print("V_t:")
-print(V_t)
-print()
-print("----------------------")
-print()
-
-print("U * sigma * V_t:")
-reconstructed = U @ sigma @ V_t
-la.format_floats(reconstructed)
-print(reconstructed)
-print()
-print("----------------------")
-print()
-
-
-
-
-
-#######################################
-
 import pandas as pd
-import numpy as np
+import matplotlib.pyplot as plt
+import sys
 
-df = pd.read_excel('files/manatee.xlsx', header=0)
+np.set_printoptions(linewidth=np.inf)
+np.set_printoptions(threshold=np.inf)
 
-matriz = df.to_numpy(dtype=float)
-n,m = matriz.shape
+filename = ""
+if len(sys.argv) > 1:
+    filename = sys.argv[1]
+    print(f"Reading file: {filename}")
+else:
+    print("Usage: python main.py <filename>")
+    sys.exit(1)
 
-print("Matriz de dados:\n", matriz)
+df = pd.read_csv(filename)
+columns = df.columns
+matrix = df.to_numpy()
 
-matriz_media = np.mean(matriz, axis=0)
-print("\nMatriz da Media:\n", matriz_media)
+with open('output.txt', 'w') as file:
+    file.write("--------------------\n")
+    file.write("| Data matrix read |\n")
+    file.write("--------------------\n\n")
+    file.write(f"{matrix}\n");
+    file.write("\n\n\n\n\n")
 
-matriz_desvio_padrao = np.std(matriz, axis=0)
-print("\nMatriz do Desvio padrao:\n", matriz_desvio_padrao)
+    matrix_mean = np.mean(matrix, axis=0)
+    file.write("---------------\n")
+    file.write("| Matrix mean |\n")
+    file.write("---------------\n\n")
+    file.write(f"{matrix_mean}\n")
+    file.write("\n\n\n\n\n")
 
-matriz_standartizada = (matriz - matriz_media) / matriz_desvio_padrao
-print("\nMatriz Stndartizada:\n", matriz_standartizada)
+    matrix_std_dev = np.std(matrix, axis=0)
+    file.write("-----------------------------\n")
+    file.write("| Matrix standard deviation |\n")
+    file.write("-----------------------------\n\n")
+    file.write(f"{matrix_std_dev}\n")
+    file.write("\n\n\n\n\n")
 
-matriz_covariancias = (matriz_standartizada.T @ matriz_standartizada) / n
-print("\nMatriz das Covariancias:\n", matriz_covariancias)
+    matrix_standardized = (matrix - matrix_mean) / matrix_std_dev
+    file.write("-----------------------\n")
+    file.write("| Standardized matrix |\n")
+    file.write("-----------------------\n\n")
+    file.write(f"{matrix_standardized}\n")
+    file.write("\n\n\n\n\n")
 
-eigenvalues_mc, eigenvectors_mc = np.linalg.eig(matriz_covariancias)
-print("\nMatriz dos Valores proprios da Matriz das Covariancais\n", eigenvalues_mc)
-print("\nMatriz dos Vetores Proprios da Matriz das Covariancais\n", eigenvectors_mc)
+    covariance_matrix = (matrix_standardized.T @ matrix_standardized) / matrix.shape[0]
+    file.write("---------------------\n")
+    file.write("| Covariance matrix |\n")
+    file.write("---------------------\n\n")
+    file.write(f"{covariance_matrix}\n")
+    file.write("\n\n\n\n\n")
 
-variancias = (eigenvectors_mc / np.sum(eigenvalues_mc)) * 100
-print("\nVariancia:\n", variancias)
+    eigenvalues, eigenvectors = np.linalg.eig(covariance_matrix)
+    ordered_indexes = np.argsort(eigenvalues)[::-1]
+    eigenvalues = eigenvalues[ordered_indexes]
+    eigenvectors = eigenvectors[:,ordered_indexes]
 
-num_componentes = 1
-V = eigenvectors_mc[:,:num_componentes]
+    file.write("---------------------------------\n")
+    file.write("| Covariance matrix eigenvalues |\n")
+    file.write("---------------------------------\n\n")
+    file.write(f"{eigenvalues}\n")
+    file.write("\n\n\n\n\n")
 
-pca = matriz_standartizada @ V
-print("\nMatriz transofrmada:\n", pca)
+    file.write("----------------------------------\n")
+    file.write("| Covariance matrix eigenvectors |\n")
+    file.write("----------------------------------\n\n")
+    file.write(f"{eigenvectors}\n")
+    file.write("\n\n\n\n\n")
+
+    component_variances = (eigenvalues / np.sum(eigenvalues)) * 100
+    file.write("-----------------------\n")
+    file.write("| Component variances |\n")
+    file.write("-----------------------\n\n")
+    file.write(f"{component_variances}\n")
+    file.write("\n\n\n\n\n")
+
+    num_components = 3
+    V = eigenvectors[:,:num_components]
+
+    pca = matrix_standardized @ V
+    file.write("--------------\n")
+    file.write("| New matrix |\n")
+    file.write("--------------\n\n")
+    file.write(f"{pca}\n")
+    file.write("\n\n\n\n\n")
+
+    plt.figure(figsize=(10, 10))
+    ax = plt.axes(projection='3d')
+    x = pca[:, 0]
+    y = pca[:, 1]
+    z = pca[:, 2]
+
+    ax.scatter(x, y, z, edgecolors='k', color='purple', s=75)
+
+    # Create a grid for the plane at z=0
+    x_range = np.linspace(min(x), max(x), 20)
+    y_range = np.linspace(min(y), max(y), 20)
+    X, Y = np.meshgrid(x_range, y_range)
+    Z = np.zeros_like(X)  # Plane at z=0
+
+    # Plot the plane
+    ax.plot_surface(X, Y, Z, alpha=0.3, color='gray', edgecolor='none')
+
+    for xi, yi, zi in zip(x, y, z):
+        ax.plot([xi,xi], [yi,yi], [zi,0], 'k--', linewidth=1.0)
+
+    ax.set_xlabel("Principal component 1")
+    ax.set_ylabel("Principal component 2")
+    ax.set_zlabel("Principal component 3")
+    ax.set_title(" " * 75 + "PCA" + " " * 75)
+    ax.grid()
+    plt.savefig("figure.png", dpi=150, bbox_inches='tight')
+    plt.close()
+
+    for i in range(num_components):
+        print(f"PC{i + 1} Correlations ({component_variances[i]:.2f}%):")
+        correlations = eigenvectors[:,i]
+        for j in range(len(columns)):
+            extra_len = 25 - len(f"- {columns[j]}: ")
+            print(f"\t- {columns[j]}: {correlations[j]:{extra_len}.2f}")
+        print()
